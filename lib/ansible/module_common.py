@@ -1,4 +1,4 @@
-# (c) 2013, Michael DeHaan <michael.dehaan@gmail.com>
+# (c) 2013-2014, Michael DeHaan <michael.dehaan@gmail.com>
 #
 # This file is part of Ansible
 #
@@ -84,7 +84,7 @@ class ModuleReplacer(object):
         module_style = 'old'
         if REPLACER in module_data:
             module_style = 'new'
-        elif 'from ansible.snippets.' in module_data:
+        elif 'from ansible.module_utils.' in module_data:
             module_style = 'new'
         elif 'WANT_JSON' in module_data:
             module_style = 'non_native_want_json'
@@ -136,7 +136,10 @@ class ModuleReplacer(object):
             complex_args_json = utils.jsonify(complex_args)
             # We force conversion of module_args to str because module_common calls shlex.split,
             # a standard library function that incorrectly handles Unicode input before Python 2.7.3.
-            encoded_args = repr(module_args.encode('utf-8'))
+            try:
+                encoded_args = repr(module_args.encode('utf-8'))
+            except UnicodeDecodeError:
+                encoded_args = repr(module_args)
             encoded_lang = repr(C.DEFAULT_MODULE_LANG)
             encoded_complex = repr(complex_args_json)
 

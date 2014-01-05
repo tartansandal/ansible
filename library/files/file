@@ -124,7 +124,7 @@ options:
     choices: [ "yes", "no" ]
     description:
       - 'force the creation of the symlinks in two cases: the source file does 
-        not exist (but will appear later); the destination exists and a file (so, we need to unlink the
+        not exist (but will appear later); the destination exists and is a file (so, we need to unlink the
         "path" file and create symlink to the "src" file in place of it).'
 notes:
     - See also M(copy), M(template), M(assemble)
@@ -234,8 +234,8 @@ def main():
                         if module.check_mode:
                             module.exit_json(changed=True)
                         shutil.rmtree(path, ignore_errors=False)
-                    except:
-                        module.exit_json(msg="rmtree failed")
+                    except Exception, e:
+                        module.fail_json(msg="rmtree failed: %s" % str(e))
             else:
                 if module.check_mode:
                     module.exit_json(changed=True)
@@ -349,7 +349,7 @@ def main():
     else:
         module.fail_json(path=path, msg='unexpected position reached')
 
-# this is magic, see lib/ansible/module_common.py
-#<<INCLUDE_ANSIBLE_MODULE_COMMON>>
+# import module snippets
+from ansible.module_utils.basic import *
 main()
 

@@ -1,4 +1,4 @@
-# (c) 2013, Benno Joy <benno@ansibleworks.com>
+# (c) 2013-2014, Benno Joy <benno@ansibleworks.com>
 #
 # This file is part of Ansible
 #
@@ -23,7 +23,7 @@ from ansible.runner.return_data import ReturnData
 
 class ActionModule(object):
 
-    NEEDS_TMPPATH = False
+    TRANSFERS_FILES = False
 
     def __init__(self, runner):
         self.runner = runner

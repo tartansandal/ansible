@@ -45,6 +45,7 @@ class Connection(object):
         self.password = password
         self.private_key_file = private_key_file
         self.HASHED_KEY_MAGIC = "|1|"
+        self.has_pipelining = False
 
         fcntl.lockf(self.runner.process_lockfile, fcntl.LOCK_EX)
         self.cp_dir = utils.prepare_writeable_dir('$HOME/.ansible/cp',mode=0700)
@@ -144,8 +145,11 @@ class Connection(object):
                     return False
         return True
 
-    def exec_command(self, cmd, tmp_path, sudo_user,sudoable=False, executable='/bin/sh'):
+    def exec_command(self, cmd, tmp_path, sudo_user,sudoable=False, executable='/bin/sh', in_data=None):
         ''' run a command on the remote host '''
+
+        if in_data:
+            raise errors.AnsibleError("Internal Error: this module does not support optimized module pipelining")
 
         ssh_cmd = self._password_cmd()
         ssh_cmd += ["ssh", "-tt"]
@@ -237,9 +241,13 @@ class Connection(object):
                 stderr += dat
                 if dat == '':
                     rpipes.remove(p.stderr)
-            if not rpipes or p.poll() is not None:
-                p.wait()
+            # only break out if we've emptied the pipes, or there is nothing to
+            # read from and the process has finished.
+            if (not rpipes or not rfd) and p.poll() is not None:
                 break
+            # Calling wait while there are still pipes to read can cause a lock
+            elif not rpipes and p.poll() == None:
+                p.wait()
         stdin.close() # close stdin after we read from stdout (see also issue #848)
         
         if C.HOST_KEY_CHECKING and not_in_host_file:
@@ -247,8 +255,8 @@ class Connection(object):
             # the host to known hosts is not intermingled with multiprocess output.
             fcntl.lockf(self.runner.output_lockfile, fcntl.LOCK_UN)
             fcntl.lockf(self.runner.process_lockfile, fcntl.LOCK_UN)
-
-        if p.returncode != 0 and stderr.find('Bad configuration option: ControlPersist') != -1:
+        controlpersisterror = stderr.find('Bad configuration option: ControlPersist') != -1 or stderr.find('unknown configuration option: ControlPersist') != -1
+        if p.returncode != 0 and controlpersisterror:
             raise errors.AnsibleError('using -c ssh on certain older ssh versions may not support ControlPersist, set ANSIBLE_SSH_ARGS="" (or ansible_ssh_args in the config file) before running again')
 
         return (p.returncode, '', stdout, stderr)

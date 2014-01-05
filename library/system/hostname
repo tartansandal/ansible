@@ -203,15 +203,19 @@ class RedHatStrategy(GenericStrategy):
     def set_permanent_hostname(self, name):
         try:
             lines = []
+            found = False
             f = open(self.NETWORK_FILE, 'rb')
             try:
                 for line in f.readlines():
                     if line.startswith('HOSTNAME'):
                         lines.append("HOSTNAME=%s\n" % name)
+                        found = True
                     else:
                         lines.append(line)
             finally:
                 f.close()
+            if not found:
+                lines.append("HOSTNAME=%s\n" % name)
             f = open(self.NETWORK_FILE, 'w+')
             try:
                 f.writelines(lines)
@@ -226,14 +230,24 @@ class RedHat5Hostname(Hostname):
     distribution = 'Redhat'
     strategy_class = RedHatStrategy
 
-class RedHatHostname(Hostname):
+class RedHatServerHostname(Hostname):
     platform = 'Linux'
     distribution = 'Red hat enterprise linux server'
+    strategy_class = RedHatStrategy
+
+class RedHatWorkstationHostname(Hostname):
+    platform = 'Linux'
+    distribution = 'Red hat enterprise linux workstation'
     strategy_class = RedHatStrategy
 
 class CentOSHostname(Hostname):
     platform = 'Linux'
     distribution = 'Centos'
+    strategy_class = RedHatStrategy
+
+class AmazonLinuxHostname(Hostname):
+    platform = 'Linux'
+    distribution = 'Amazon'
     strategy_class = RedHatStrategy
 
 # ===========================================
@@ -319,6 +333,6 @@ def main():
 
     module.exit_json(changed=changed, name=name)
 
-# include magic from lib/ansible/module_common.py
-#<<INCLUDE_ANSIBLE_MODULE_COMMON>>
+# import module snippets
+from ansible.module_utils.basic import *
 main()

@@ -49,6 +49,7 @@ class Connection(object):
         self.port = port[0]
         self.accport = port[1]
         self.is_connected = False
+        self.has_pipelining = False
 
         if not self.port:
             self.port = constants.DEFAULT_REMOTE_PORT
@@ -86,7 +87,7 @@ class Connection(object):
     def _execute_accelerate_module(self):
         args = "password=%s port=%s debug=%d ipv6=%s" % (base64.b64encode(self.key.__str__()), str(self.accport), int(utils.VERBOSITY), self.runner.accelerate_ipv6)
         inject = dict(password=self.key)
-        if self.runner.accelerate_inventory_host:
+        if getattr(self.runner, 'accelerate_inventory_host', False):
             inject = utils.combine_vars(inject, self.runner.inventory.get_variables(self.runner.accelerate_inventory_host))
         else:
             inject = utils.combine_vars(inject, self.runner.inventory.get_variables(self.host))
@@ -158,8 +159,11 @@ class Connection(object):
         except socket.timeout:
             raise errors.AnsibleError("timed out while waiting to receive data")
 
-    def exec_command(self, cmd, tmp_path, sudo_user, sudoable=False, executable='/bin/sh'):
+    def exec_command(self, cmd, tmp_path, sudo_user, sudoable=False, executable='/bin/sh', in_data=None):
         ''' run a command on the remote host '''
+
+        if in_data:
+            raise errors.AnsibleError("Internal Error: this module does not support optimized module pipelining")
 
         if executable == "":
             executable = constants.DEFAULT_EXECUTABLE
